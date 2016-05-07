@@ -34,6 +34,8 @@ public class SocketAndroidActivity extends Activity {
     final int TX_DATA_UPDATE_UI = 3;
     final int READ_ALL_INFO =4;
     byte SendQueBuf[] = { 0x3A, 0x00, 0x01, 0x0A, 0x00, 0x00, 0x23, 0x00 };
+    public static byte Node[]= new byte[32];
+    private String strTemp;
     /**
      * Called when the activity is first created.
      */
@@ -113,8 +115,9 @@ public class SocketAndroidActivity extends Activity {
             public void handleMessage(Message msg){
                 switch (msg.what){
                     case UPDATA:
-                        String str = (String) msg.obj;
-                        mTextView.setText(str);
+                        strTemp = "wendu" + Node[0]+"ye"+Node[1]+"ewe"+Node[2];
+                        //String str = (String) msg.obj;
+                        mTextView.setText(strTemp);
                         break;
                     case TX_DATA_UPDATE_UI: // msg.arg1保存功能码 arg2保存终端地址
                         switch (msg.arg1) {
@@ -128,7 +131,9 @@ public class SocketAndroidActivity extends Activity {
                                 break;
                         }
                 }
+                super.handleMessage(msg);
             }
         };
+
     }
 }

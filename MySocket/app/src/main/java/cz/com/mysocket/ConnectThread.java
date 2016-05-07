@@ -3,6 +3,7 @@ package cz.com.mysocket;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -33,6 +34,8 @@ public class ConnectThread extends Thread{
     public static Handler childHandler;
     static final int TX_DATA = 5;
     static final int RX_EXIT = 6;
+    int ucRecvLen = 7;
+
     public  ConnectThread(String ipaddress , int portlang ){
         ipaddr = ipaddress;
         portadd = portlang;
@@ -139,18 +142,55 @@ public class ConnectThread extends Thread{
            try {
                while (socket.isConnected() && RXflag) {
                    byte strRxbuf[] = new byte[32];
-                   int readBytes = 0;
-                   int len;
-                   while (readBytes < 32) {
-                       len = inputStream.read(strRxbuf, readBytes, 32 - readBytes);
-                       if (len == -1) {
-                           break;
+                   int len, readBytes = 0;
+                   while (readBytes < ucRecvLen) {
+                       len = inputStream.read(strRxbuf, readBytes, ucRecvLen
+                               - readBytes);
+
+                       if (strRxbuf[0] == 0x3A && len >= 4) {
+                           ucRecvLen = 22;
+                           readBytes += len;
+                       } else {
+                           strRxbuf[0] = 0;
+                           readBytes = 0;
                        }
-                       readBytes += len;
+                       if (len == -1)
+                           break;
                    }
-                   String strRx =new String(strRxbuf,"UTF-8");
-                   messagev = SocketAndroidActivity.handler.obtainMessage(SocketAndroidActivity.UPDATA , strRx );
-                   SocketAndroidActivity.handler.sendMessage(messagev);
+
+                   if (strRxbuf[ucRecvLen - 1] == 0x23) {
+                       if (ucRecvLen == 22) {
+                           System.arraycopy(strRxbuf, 0, SocketAndroidActivity.Node, 0, 4);
+
+                           messagev = SocketAndroidActivity.handler.obtainMessage(SocketAndroidActivity.UPDATA, strRxbuf);
+                           SocketAndroidActivity.handler.sendMessage(messagev);
+                           // RefreshData();
+                           // OnReceive(ClientSock[0]); //andy
+                           len = readBytes = 0;
+                           strRxbuf[0] = 0;
+                           ucRecvLen = 7;
+                       } else {
+                           len = readBytes = 0;
+                           strRxbuf[0] = 0;
+                           ucRecvLen = 7;
+                       }
+                   }else {
+                       len =readBytes= 0;
+                       strRxbuf[0] = 0;
+                       ucRecvLen = 7;
+                   }
+
+                   /*if (index > 100) {
+                       index = 0;
+                       len =readBytes= 0;
+                       strRxbuf[0] = 0;
+                       ucRecvLen = 7;
+                   }*/
+                   //SocketAndroidActivity.Node[0] = strRxbuf[0];
+                   //System.arraycopy(strRxbuf,0, SocketAndroidActivity.Node, 0, 4);
+                   //String strRx = new String(strRxbuf,"UTF-8");
+                   //messagev = SocketAndroidActivity.handler.obtainMessage(SocketAndroidActivity.UPDATA , strRxbuf);
+                   //SocketAndroidActivity.handler.sendMessage(messagev);
                }
                if (socket.isConnected())
                    socket.close();
