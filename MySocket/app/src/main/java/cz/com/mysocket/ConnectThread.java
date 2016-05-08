@@ -48,6 +48,8 @@ public class ConnectThread extends Thread{
             socket.connect(socketAddress, portadd);
             inputStream = socket.getInputStream();
             outputStream = socket.getOutputStream();
+            messagev = SocketAndroidActivity.handler.obtainMessage(SocketAndroidActivity.CONNCTION_OK, "已连接服务器");
+            SocketAndroidActivity.handler.sendMessage(messagev);
             rxthread = new RxThread();
             rxthread.start();
 
@@ -73,8 +75,22 @@ public class ConnectThread extends Thread{
             br.close();
             //关闭Socket
             socket.close();*/
-        }catch (Exception e) {
+        }catch (IOException e) {
+            try {
+                sleep(10);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+            messagev = SocketAndroidActivity.handler.obtainMessage(SocketAndroidActivity.CONNCTION_ERROR, "无法连接服务器");
+            SocketAndroidActivity.handler.sendMessage(messagev);
+            try{
+                Log.d("asdasd","dasda");
+                socket.close();
+            }catch (Exception e2){
+                e2.printStackTrace();
+            }
             e.printStackTrace();
+        }catch (NumberFormatException e) {
         }
     }
     public void run(){

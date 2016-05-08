@@ -4,9 +4,12 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.preference.PreferenceManager;
+import android.util.Log;
 import android.widget.Button;
 
 
@@ -23,6 +26,7 @@ public class SocketAndroidActivity extends Activity {
     public static final int UPDATA = 1;
     public static Handler handler;
     public TextView mTextView = null;
+    public TextView Texttips = null;
     public EditText editIP;
     public EditText editport;
     private Button btnip,btnsendmsg;
@@ -36,6 +40,10 @@ public class SocketAndroidActivity extends Activity {
     byte SendQueBuf[] = { 0x3A, 0x00, 0x01, 0x0A, 0x00, 0x00, 0x23, 0x00 };
     public static byte Node[]= new byte[32];
     private String strTemp;
+    private SharedPreferences pref;
+    private SharedPreferences.Editor editor;
+    static final int CONNCTION_OK = 8;
+    static final int CONNCTION_ERROR = 9;
     /**
      * Called when the activity is first created.
      */
@@ -43,7 +51,9 @@ public class SocketAndroidActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.mian);
+        pref = PreferenceManager.getDefaultSharedPreferences(this);
         initcontrol();
+
         inihandle();
     }
     class ButtonClick implements OnClickListener{
@@ -64,15 +74,28 @@ public class SocketAndroidActivity extends Activity {
         builder.setView(view);
         editIP = (EditText)view.findViewById(R.id.ip1);
         editport = (EditText)view.findViewById(R.id.port1);
+        boolean isRemember = pref.getBoolean("remember_passip", false);
+        if(isRemember){
+            String accountip = pref.getString("accountip", "");
+            String portnum = pref.getString("portnum", "");
+            editIP.setText(accountip);
+            editport.setText(portnum);
+        }
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                editor =pref.edit();
+                editor.putBoolean("remember_passip", true);
+                editor.putString("accountip", editIP.getText().toString());
+                editor.putString("portnum", editport.getText().toString());
+                editor.commit();
                 ipaddre = editIP.getText().toString();
                 portlang = Integer.parseInt(editport.getText().toString());
                 conthread = new ConnectThread(ipaddre, portlang);
                 conthread.start();
-                mainTimer = new Timer();// 定时查询所有终端信息
-                setTimerTask();
+                mainTimer = new Timer();
+                Log.d("AAAA", "到这里");// 定时查询所有终端信息
+                //setTimerTask();
             }
 
         });
@@ -93,7 +116,7 @@ public class SocketAndroidActivity extends Activity {
                     handler.sendMessage(MainMsg);
                 }
             }
-        }, 500, 450);// 表示500毫秒之后，每隔1000毫秒执行一次
+        }, 500, 1000);// 表示500毫秒之后，每隔1000毫秒执行一次
     }
 
     private void initcontrol(){
@@ -102,6 +125,8 @@ public class SocketAndroidActivity extends Activity {
         btnsendmsg = (Button) findViewById(R.id.btn_sendmsg);
         btnsendmsg.setOnClickListener(new ButtonClick());
         mTextView = (TextView) findViewById(R.id.TextView01);
+        Texttips = (TextView) findViewById(R.id.tips);
+        Texttips.setText("请先连接服务器");
 
     }
     public void SendData(byte buffer[], int len) {
@@ -130,6 +155,17 @@ public class SocketAndroidActivity extends Activity {
                                 SendData(SendQueBuf, 6); // 查询所有终端报文3A 00 FF 01 C4 23
                                 break;
                         }
+                        break;
+                    case CONNCTION_OK:
+                        String str = (String) msg.obj;
+                        Texttips.setText(str);
+                        mainTimer = new Timer();
+                        setTimerTask();
+                        break;
+                    case CONNCTION_ERROR:
+                        String strd = (String) msg.obj;
+                        Texttips.setText(strd);
+                        break;
                 }
                 super.handleMessage(msg);
             }
